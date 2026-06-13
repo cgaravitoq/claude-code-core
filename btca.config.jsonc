@@ -1,0 +1,26 @@
+{
+	"$schema": "https://btca.dev/btca.schema.json",
+	"dataDirectory": ".btca",
+	"resources": [
+		{
+			"name": "claude-code-core",
+			"type": "git",
+			"url": "https://github.com/cgaravitoq/claude-code-core",
+			"branch": "main",
+			"specialNotes": "This repo: framework-agnostic core for using the Claude Code OAuth subscription as an Anthropic provider. src/creds.ts (read/refresh ~/.claude/.credentials.json + Keychain + CLI fallback), src/signing.ts (reverse-engineered x-anthropic-billing-header), src/model-config.ts (ccVersion, betas, per-model overrides), src/transforms.ts (Claude Code payload stealth reshaping). Zero runtime deps."
+		},
+		{
+			"name": "opencode-claude-auth",
+			"type": "git",
+			"url": "https://github.com/griffinmartin/opencode-claude-auth",
+			"branch": "main",
+			"specialNotes": "Upstream origin of the creds + transforms logic. Re-read when Claude Code changes its OAuth refresh flow, billing header, betas, or payload shape. Focus on src/transforms.ts and the credential read/refresh code."
+		},
+		{
+			"name": "anthropic-sdk",
+			"type": "npm",
+			"package": "@anthropic-ai/sdk",
+			"specialNotes": "Anthropic TypeScript SDK. Reference for messages.stream params, content block types, betas, and streaming event shapes consumed by the per-framework adapters that build on this core."
+		}
+	]
+}
