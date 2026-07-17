@@ -22,6 +22,19 @@ describe("model config", () => {
 		);
 	});
 
+	test("claude 5 family enables adaptive thinking without long-context beta", () => {
+		for (const model of ["claude-fable-5", "claude-mythos-5", "claude-sonnet-5"]) {
+			expect(getModelOverride(model)).toEqual(
+				expect.objectContaining({ adaptiveThinking: true }),
+			);
+			expect(computeBetas(model)).not.toContain("context-1m-2025-08-07");
+		}
+	});
+
+	test("sonnet 4.6 does not match the sonnet-5 pattern", () => {
+		expect(getModelOverride("claude-sonnet-4-6")?.adaptiveThinking).toBeUndefined();
+	});
+
 	test("haiku returns haiku override", () => {
 		expect(getModelOverride("claude-haiku-4-5")).toBe(config.modelOverrides.haiku ?? null);
 	});

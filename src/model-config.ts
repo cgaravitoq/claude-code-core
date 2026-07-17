@@ -3,8 +3,8 @@ export interface ModelOverride {
 	readonly add?: readonly string[];
 	longContext?: boolean;
 	disableEffort?: boolean;
-	// Opus 4.8/4.7 require thinking:{type:"adaptive"} + output_config.effort;
-	// a manual budget_tokens is rejected with a 400 on these models.
+	// The Claude 5 family and Opus 4.8/4.7 require thinking:{type:"adaptive"} +
+	// output_config.effort; a manual budget_tokens is rejected with a 400.
 	adaptiveThinking?: boolean;
 }
 
@@ -29,6 +29,16 @@ export const config: ModelConfig = {
 	// Insertion order matters: getModelOverride returns the first key that is a
 	// substring of the lowercased model id.
 	modelOverrides: {
+		// Claude 5 ships 1M context by default — no long-context beta needed.
+		"fable-5": {
+			adaptiveThinking: true,
+		},
+		"mythos-5": {
+			adaptiveThinking: true,
+		},
+		"sonnet-5": {
+			adaptiveThinking: true,
+		},
 		haiku: {
 			exclude: ["interleaved-thinking-2025-05-14"],
 			disableEffort: true,

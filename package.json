@@ -1,6 +1,6 @@
 {
 	"name": "@cgaravitoq/claude-code-core",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Framework-agnostic core for using Claude Code's OAuth subscription as an Anthropic provider: credential read/refresh, signed billing header, beta computation, and request transforms. No Pi, no LangChain — just the native Claude Code stack.",
 	"type": "module",
 	"types": "./dist/index.d.ts",
