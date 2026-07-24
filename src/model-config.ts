@@ -36,6 +36,9 @@ export const config: ModelConfig = {
 		"mythos-5": {
 			adaptiveThinking: true,
 		},
+		"opus-5": {
+			adaptiveThinking: true,
+		},
 		"sonnet-5": {
 			adaptiveThinking: true,
 		},
