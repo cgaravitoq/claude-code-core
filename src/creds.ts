@@ -105,6 +105,28 @@ export function readClaudeCodeCreds(): ClaudeCodeCreds | null {
 	return readFromKeychain() ?? readFromFile();
 }
 
+// The Claude Code CLI stores more than the three token fields in
+// `claudeAiOauth` (`scopes`, `subscriptionType`, …) and reports "Not logged in"
+// when `scopes` is absent, so unknown keys have to survive a token rotation.
+export function mergeCredentialBlob(
+	existing: Record<string, unknown>,
+	creds: ClaudeCodeCreds,
+): Record<string, unknown> {
+	const existingOauth =
+		typeof existing.claudeAiOauth === "object" && existing.claudeAiOauth !== null
+			? (existing.claudeAiOauth as Record<string, unknown>)
+			: {};
+	return {
+		...existing,
+		claudeAiOauth: {
+			...existingOauth,
+			accessToken: creds.accessToken,
+			refreshToken: creds.refreshToken,
+			expiresAt: creds.expiresAt,
+		},
+	};
+}
+
 function writeBackToFile(creds: ClaudeCodeCreds): void {
 	const path = getCredentialsFilePath();
 	const dir = dirname(path);
@@ -117,14 +139,7 @@ function writeBackToFile(creds: ClaudeCodeCreds): void {
 			// overwrite
 		}
 	}
-	const updated = {
-		...existing,
-		claudeAiOauth: {
-			accessToken: creds.accessToken,
-			refreshToken: creds.refreshToken,
-			expiresAt: creds.expiresAt,
-		},
-	};
+	const updated = mergeCredentialBlob(existing, creds);
 	const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
 	try {
 		writeFileSync(tmp, JSON.stringify(updated, null, 2), {
