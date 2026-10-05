@@ -1,0 +1,94 @@
+name: Release
+
+# Every published version has to exist on both registries with identical bytes: muvi maps the
+# whole @cgaravitoq scope to npm.pkg.github.com, so its install of a pinned version resolves
+# there, while the package stays public on npmjs. npmjs is published first and stays the source
+# of truth; GitHub Packages then republishes the tarball that npm pack pulls back out of npmjs,
+# which is what makes the two byte-identical instead of merely equivalent. npmjs goes out over
+# OIDC trusted publishing, so no write token is stored anywhere: that path needs id-token:
+# write, npm >= 11.5.1 (Node 24 bundles it), a trusted publisher registered on npmjs.com for
+# exactly this workflow filename, and a GitHub-hosted runner (npm does not accept self-hosted
+# runners). Both jobs publish only when the registry is missing that version, so a rerun after a
+# half-finished release finishes it instead of failing.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version already on npmjs to mirror to GitHub Packages, e.g. 0.3.2"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  npmjs:
+    name: Publish to npmjs
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Check the tag against package.json
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          manifest="$(node -p "require('./package.json').version")"
+          if [ "${version}" != "${manifest}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match the package.json version ${manifest}"
+            exit 1
+          fi
+          echo "VERSION=${version}" >> "${GITHUB_ENV}"
+
+      - name: Publish
+        run: |
+          set -euo pipefail
+          if npm view "@cgaravitoq/claude-code-core@${VERSION}" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "@cgaravitoq/claude-code-core@${VERSION} is already on npmjs"
+            exit 0
+          fi
+          if ! npm publish --access public; then
+            echo "::error::npm publish to npmjs failed. Trusted publishing is configured on npmjs.com, not here: register a GitHub Actions trusted publisher on the package settings for cgaravitoq/claude-code-core, owner cgaravitoq, repository claude-code-core, workflow release.yml, with npm publish allowed. Until that exists npm has no identity to exchange the OIDC token for and the registry answers 404 or 403."
+            exit 1
+          fi
+
+  github-packages:
+    name: Mirror to GitHub Packages
+    needs: npmjs
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.npmjs.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: https://npm.pkg.github.com
+
+      - name: Mirror the npmjs tarball
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: scripts/mirror-to-github-packages.sh "${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}"
