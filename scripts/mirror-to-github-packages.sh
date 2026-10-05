@@ -2,7 +2,8 @@
 
 set -euo pipefail
 
-readonly PACKAGE="@cgaravitoq/claude-code-core"
+readonly SCOPE="@cgaravitoq"
+readonly PACKAGE="${SCOPE}/claude-code-core"
 readonly NPMJS="https://registry.npmjs.org"
 readonly GITHUB_PACKAGES="https://npm.pkg.github.com"
 
@@ -30,12 +31,12 @@ if [ -z "$version" ]; then
 	usage
 fi
 
-if ! npm view "${PACKAGE}@${version}" version --registry="${NPMJS}" >/dev/null 2>&1; then
+if ! npm view "${PACKAGE}@${version}" version --"${SCOPE}:registry=${NPMJS}" >/dev/null 2>&1; then
 	echo "error: ${PACKAGE}@${version} is not on npmjs, so there are no bytes to mirror" >&2
 	exit 1
 fi
 
-if npm view "${PACKAGE}@${version}" version --registry="${GITHUB_PACKAGES}" >/dev/null 2>&1; then
+if npm view "${PACKAGE}@${version}" version --"${SCOPE}:registry=${GITHUB_PACKAGES}" >/dev/null 2>&1; then
 	echo "${PACKAGE}@${version} is already on GitHub Packages"
 	exit 0
 fi
@@ -43,12 +44,12 @@ fi
 scratch="$(mktemp -d)"
 trap 'rm -rf "${scratch}"' EXIT
 
-packed="$(npm pack "${PACKAGE}@${version}" --registry="${NPMJS}" --pack-destination "${scratch}" | tail -n 1)"
+packed="$(npm pack "${PACKAGE}@${version}" --"${SCOPE}:registry=${NPMJS}" --pack-destination "${scratch}" | tail -n 1)"
 tarball="${scratch}/${packed}"
 echo "packed ${PACKAGE}@${version} from npmjs as ${tarball}"
 
 if [ -n "${dry_run}" ]; then
-	npm publish "${tarball}" --registry="${GITHUB_PACKAGES}" --dry-run
+	npm publish "${tarball}" --"${SCOPE}:registry=${GITHUB_PACKAGES}" --dry-run
 else
-	npm publish "${tarball}" --registry="${GITHUB_PACKAGES}"
+	npm publish "${tarball}" --"${SCOPE}:registry=${GITHUB_PACKAGES}"
 fi
