@@ -42,6 +42,9 @@ export const config: ModelConfig = {
 		"sonnet-5": {
 			adaptiveThinking: true,
 		},
+		"haiku-5": {
+			adaptiveThinking: true,
+		},
 		haiku: {
 			exclude: ["interleaved-thinking-2025-05-14"],
 			disableEffort: true,
