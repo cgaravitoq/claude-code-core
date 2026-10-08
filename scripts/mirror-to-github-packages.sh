@@ -31,10 +31,16 @@ if [ -z "$version" ]; then
 	usage
 fi
 
-if ! npm view "${PACKAGE}@${version}" version --"${SCOPE}:registry=${NPMJS}" >/dev/null 2>&1; then
-	echo "error: ${PACKAGE}@${version} is not on npmjs, so there are no bytes to mirror" >&2
-	exit 1
-fi
+attempt=1
+until npm view "${PACKAGE}@${version}" version --"${SCOPE}:registry=${NPMJS}" >/dev/null 2>&1; do
+	if [ "${attempt}" -ge 30 ]; then
+		echo "error: ${PACKAGE}@${version} is not on npmjs after 10 minutes, so there are no bytes to mirror" >&2
+		exit 1
+	fi
+	echo "waiting for npmjs to serve ${PACKAGE}@${version}"
+	attempt=$((attempt + 1))
+	sleep 20
+done
 
 if npm view "${PACKAGE}@${version}" version --"${SCOPE}:registry=${GITHUB_PACKAGES}" >/dev/null 2>&1; then
 	echo "${PACKAGE}@${version} is already on GitHub Packages"
