@@ -105,7 +105,7 @@ export function readClaudeCodeCreds(): ClaudeCodeCreds | null {
 	return readFromKeychain() ?? readFromFile();
 }
 
-function writeBackToFile(creds: ClaudeCodeCreds): void {
+function writeBackToFile(creds: ClaudeCodeCreds, previousRefreshToken: string): void {
 	const path = getCredentialsFilePath();
 	const dir = dirname(path);
 	if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -117,9 +117,20 @@ function writeBackToFile(creds: ClaudeCodeCreds): void {
 			// overwrite
 		}
 	}
+	// Claude Code only recognizes the login with the other fields it stores
+	// next to the tokens (scopes, subscriptionType, rateLimitTier, ...).
+	const existingOauth =
+		typeof existing.claudeAiOauth === "object" && existing.claudeAiOauth !== null
+			? (existing.claudeAiOauth as Record<string, unknown>)
+			: {};
+	// A different stored refresh token is a newer login (another account, or a
+	// refresh by Claude Code itself); overwriting it would log Claude Code out.
+	const storedRefreshToken = existingOauth.refreshToken ?? existingOauth.refresh_token;
+	if (storedRefreshToken !== undefined && storedRefreshToken !== previousRefreshToken) return;
 	const updated = {
 		...existing,
 		claudeAiOauth: {
+			...existingOauth,
 			accessToken: creds.accessToken,
 			refreshToken: creds.refreshToken,
 			expiresAt: creds.expiresAt,
@@ -254,7 +265,7 @@ function performRefresh(current: ClaudeCodeCreds): Promise<ClaudeCodeCreds> {
 			});
 			if (oauth && oauth.expiresAt > Date.now() + 60_000) {
 				try {
-					writeBackToFile(oauth);
+					writeBackToFile(oauth, current.refreshToken);
 				} catch {
 					// non-fatal
 				}
