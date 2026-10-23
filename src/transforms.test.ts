@@ -13,7 +13,7 @@ type ContentBlock = {
 type Message = { role: "user" | "assistant"; content: ContentBlock[] };
 
 describe("tool transforms", () => {
-	test("replaces orphan tool_use with placeholder and preserves messages", () => {
+	test("replaces orphan tool_use with placeholder and preserves messages", async () => {
 		const params = {
 			messages: [
 				{ role: "user", content: [{ type: "text", text: "hi" }] },
@@ -25,7 +25,7 @@ describe("tool transforms", () => {
 			] satisfies Message[],
 		};
 
-		applyClaudeCodeTransforms(params);
+		await applyClaudeCodeTransforms(params);
 
 		expect(params.messages).toHaveLength(3);
 		expect(params.messages.map((message) => message.role)).toEqual(["user", "assistant", "user"]);
@@ -35,7 +35,7 @@ describe("tool transforms", () => {
 		expect(text.trim().length).toBeGreaterThan(0);
 	});
 
-	test("replaces orphan tool_result with placeholder and preserves messages", () => {
+	test("replaces orphan tool_result with placeholder and preserves messages", async () => {
 		const params = {
 			messages: [
 				{ role: "user", content: [{ type: "tool_result", tool_use_id: "tool-1" }] },
@@ -43,14 +43,14 @@ describe("tool transforms", () => {
 			] satisfies Message[],
 		};
 
-		applyClaudeCodeTransforms(params);
+		await applyClaudeCodeTransforms(params);
 
 		expect(params.messages).toHaveLength(2);
 		expect(params.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
 		expect(params.messages[0]?.content).toEqual([{ type: "text", text: "[tool result omitted]" }]);
 	});
 
-	test("matched tool pair survives untouched except tool name prefix", () => {
+	test("matched tool pair survives untouched except tool name prefix", async () => {
 		const params = {
 			messages: [
 				{
@@ -61,7 +61,7 @@ describe("tool transforms", () => {
 			] satisfies Message[],
 		};
 
-		applyClaudeCodeTransforms(params);
+		await applyClaudeCodeTransforms(params);
 
 		expect(params.messages[0]?.content).toEqual([
 			{ type: "tool_use", id: "tool-1", name: "mcp_Search", input: {} },
@@ -71,7 +71,7 @@ describe("tool transforms", () => {
 		]);
 	});
 
-	test("fully filtered message keeps placeholder and role alternation", () => {
+	test("fully filtered message keeps placeholder and role alternation", async () => {
 		const params = {
 			messages: [
 				{ role: "user", content: [{ type: "tool_result", tool_use_id: "tool-1" }] },
@@ -79,29 +79,29 @@ describe("tool transforms", () => {
 			] satisfies Message[],
 		};
 
-		applyClaudeCodeTransforms(params);
+		await applyClaudeCodeTransforms(params);
 
 		expect(params.messages[0]?.role).toBe("user");
 		expect(params.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
 		expect(params.messages[0]?.content).toEqual([{ type: "text", text: "[tool result omitted]" }]);
 	});
 
-	test("unprefix reverses prefixed tool names", () => {
+	test("unprefix reverses prefixed tool names", async () => {
 		const params = { tools: [{ name: "search" }] };
 
-		applyClaudeCodeTransforms(params);
+		await applyClaudeCodeTransforms(params);
 
 		expect(unprefixToolName(params.tools[0]?.name ?? "")).toBe("search");
 	});
 
-	test("applyClaudeCodeTransforms mutates and returns params with systems and prefixed tools", () => {
+	test("applyClaudeCodeTransforms mutates and returns params with systems and prefixed tools", async () => {
 		const params = {
 			system: "project instructions",
 			tools: [{ name: "search" }],
 			messages: [{ role: "user", content: [{ type: "text", text: "hello" }] }] satisfies Message[],
 		};
 
-		const result = applyClaudeCodeTransforms(params);
+		const result = await applyClaudeCodeTransforms(params);
 
 		expect(result).toBe(params);
 		expect(params.tools[0]?.name).toBe("mcp_Search");

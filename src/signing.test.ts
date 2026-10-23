@@ -10,23 +10,29 @@ function expectBillingHeader(value: string) {
 }
 
 describe("buildBillingHeaderValue", () => {
-	test("empty messages are deterministic and do not throw", () => {
-		const value = buildBillingHeaderValue([], "2.1.112", "sdk-cli");
+	test("empty messages are deterministic and do not throw", async () => {
+		const value = await buildBillingHeaderValue([], "2.1.112", "sdk-cli");
 
 		expectBillingHeader(value);
-		expect(value).toBe(buildBillingHeaderValue([], "2.1.112", "sdk-cli"));
+		expect(value).toBe(await buildBillingHeaderValue([], "2.1.112", "sdk-cli"));
+		expect(value).toBe(
+			"x-anthropic-billing-header: cc_version=2.1.112.b02; cc_entrypoint=sdk-cli; cch=e3b0c;",
+		);
 	});
 
-	test("single user text message is deterministic and idempotent", () => {
+	test("single user text message is deterministic and idempotent", async () => {
 		const messages: Message[] = [{ role: "user", content: "hello" }];
-		const first = buildBillingHeaderValue(messages, "2.1.112", "sdk-cli");
-		const second = buildBillingHeaderValue(messages, "2.1.112", "sdk-cli");
+		const first = await buildBillingHeaderValue(messages, "2.1.112", "sdk-cli");
+		const second = await buildBillingHeaderValue(messages, "2.1.112", "sdk-cli");
 
 		expectBillingHeader(first);
 		expect(second).toBe(first);
+		expect(first).toBe(
+			"x-anthropic-billing-header: cc_version=2.1.112.e61; cc_entrypoint=sdk-cli; cch=2cf24;",
+		);
 	});
 
-	test("only the first user message text influences output", () => {
+	test("only the first user message text influences output", async () => {
 		const base: Message[] = [
 			{ role: "assistant", content: "ignored" },
 			{ role: "user", content: "first" },
@@ -38,16 +44,25 @@ describe("buildBillingHeaderValue", () => {
 			{ role: "user", content: "changed" },
 		];
 
-		expect(buildBillingHeaderValue(changedLaterMessages, "2.1.112", "sdk-cli")).toBe(
-			buildBillingHeaderValue(base, "2.1.112", "sdk-cli"),
+		expect(await buildBillingHeaderValue(changedLaterMessages, "2.1.112", "sdk-cli")).toBe(
+			await buildBillingHeaderValue(base, "2.1.112", "sdk-cli"),
 		);
 	});
 
-	test("same input twice returns identical output", () => {
+	test("same input twice returns identical output", async () => {
 		const messages: Message[] = [{ role: "user", content: [{ type: "text", text: "hello" }] }];
 
-		expect(buildBillingHeaderValue(messages, "2.1.112", "sdk-cli")).toBe(
-			buildBillingHeaderValue(messages, "2.1.112", "sdk-cli"),
+		expect(await buildBillingHeaderValue(messages, "2.1.112", "sdk-cli")).toBe(
+			await buildBillingHeaderValue(messages, "2.1.112", "sdk-cli"),
+		);
+		expect(
+			await buildBillingHeaderValue(
+				[{ role: "user", content: "a longer prompt with sampling chars" }],
+				"2.1.280",
+				"agent-sdk",
+			),
+		).toBe(
+			"x-anthropic-billing-header: cc_version=2.1.280.d87; cc_entrypoint=agent-sdk; cch=b9741;",
 		);
 	});
 });
