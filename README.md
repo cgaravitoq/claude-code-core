@@ -52,6 +52,13 @@ LangChain chat models or a Pi provider.
 Using a subscription OAuth session from a third-party app may violate Anthropic's terms and
 risk your account.
 
+## Releases
+
+### 0.4.0
+
+- Breaking: `buildBillingHeaderValue` and `applyClaudeCodeTransforms` are now asynchronous because billing signatures use WebCrypto.
+- Added the Worker-safe `@cgaravitoq/claude-code-core/protocol` subpath for request transforms, model configuration, billing signatures, and OAuth token refresh.
+
 ## License
 
 MIT
