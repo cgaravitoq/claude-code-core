@@ -1,6 +1,25 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import * as protocol from "./protocol.ts";
+
+function readStaticImportGraph(entryPath: string, visited = new Set<string>()): string[] {
+	const path = resolve(entryPath);
+	if (visited.has(path)) return [];
+	visited.add(path);
+	const source = readFileSync(path, "utf8");
+	const imports = Array.from(source.matchAll(/(?:from\s*|import\s*)["']([^"']+)["']/g));
+	return [
+		source,
+		...imports.flatMap((match) => {
+			const specifier = match[1];
+			if (!specifier?.startsWith(".")) return [];
+			const importedPath = resolve(dirname(path), specifier);
+			return existsSync(importedPath) ? readStaticImportGraph(importedPath, visited) : [];
+		}),
+	];
+}
 
 describe("protocol subpath", () => {
 	beforeAll(() => {
@@ -21,7 +40,9 @@ describe("protocol subpath", () => {
 	});
 
 	test("built protocol bundle has no node specifier", () => {
-		const bundle = readFileSync(new URL("../dist/protocol.js", import.meta.url), "utf8");
-		expect(bundle).not.toMatch(/node:/);
+		const entryPath = fileURLToPath(new URL("../dist/protocol.js", import.meta.url));
+		const modules = readStaticImportGraph(entryPath);
+		expect(modules.length).toBeGreaterThan(1);
+		for (const source of modules) expect(source).not.toMatch(/node:/);
 	});
 });
