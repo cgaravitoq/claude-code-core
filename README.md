@@ -39,7 +39,7 @@ const creds = readClaudeCodeCreds();
 if (creds) {
   const fresh = await refreshClaudeCodeCreds(creds);
   // build your Anthropic request, then:
-  const params = applyClaudeCodeTransforms(rawParams);
+  const params = await applyClaudeCodeTransforms(rawParams);
   // send with "anthropic-beta": requestBetas(model, longContext).join(",")
 }
 ```
