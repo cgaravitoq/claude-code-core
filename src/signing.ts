@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
-
 const BILLING_SALT = "59cf53e54c78";
+const encoder = new TextEncoder();
 
 interface Message {
 	role?: string;
@@ -21,24 +20,30 @@ function extractFirstUserMessageText(messages: Message[]): string {
 	return "";
 }
 
-function computeCch(messageText: string): string {
-	return createHash("sha256").update(messageText).digest("hex").slice(0, 5);
+async function computeHashPrefix(value: string, length: number): Promise<string> {
+	const digest = await globalThis.crypto.subtle.digest("SHA-256", encoder.encode(value));
+	return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0"))
+		.join("")
+		.slice(0, length);
 }
 
-function computeVersionSuffix(messageText: string, version: string): string {
+async function computeCch(messageText: string): Promise<string> {
+	return computeHashPrefix(messageText, 5);
+}
+
+async function computeVersionSuffix(messageText: string, version: string): Promise<string> {
 	const sampled = [4, 7, 20].map((i) => (i < messageText.length ? messageText[i] : "0")).join("");
 	const input = `${BILLING_SALT}${sampled}${version}`;
-	return createHash("sha256").update(input).digest("hex").slice(0, 3);
+	return computeHashPrefix(input, 3);
 }
 
-export function buildBillingHeaderValue(
+export async function buildBillingHeaderValue(
 	messages: Message[],
 	version: string,
 	entrypoint: string,
-): string {
+): Promise<string> {
 	const text = extractFirstUserMessageText(messages);
-	const suffix = computeVersionSuffix(text, version);
-	const cch = computeCch(text);
+	const [suffix, cch] = await Promise.all([computeVersionSuffix(text, version), computeCch(text)]);
 	return (
 		`x-anthropic-billing-header: ` +
 		`cc_version=${version}.${suffix}; ` +

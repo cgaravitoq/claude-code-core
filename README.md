@@ -39,7 +39,7 @@ const creds = readClaudeCodeCreds();
 if (creds) {
   const fresh = await refreshClaudeCodeCreds(creds);
   // build your Anthropic request, then:
-  const params = applyClaudeCodeTransforms(rawParams);
+  const params = await applyClaudeCodeTransforms(rawParams);
   // send with "anthropic-beta": requestBetas(model, longContext).join(",")
 }
 ```
@@ -51,6 +51,13 @@ LangChain chat models or a Pi provider.
 
 Using a subscription OAuth session from a third-party app may violate Anthropic's terms and
 risk your account.
+
+## Releases
+
+### 0.4.0
+
+- Breaking: `buildBillingHeaderValue` and `applyClaudeCodeTransforms` are now asynchronous because billing signatures use WebCrypto.
+- Added the Worker-safe `@cgaravitoq/claude-code-core/protocol` subpath for request transforms, model configuration, billing signatures, and OAuth token refresh.
 
 ## License
 

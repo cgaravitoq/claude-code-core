@@ -70,11 +70,11 @@ export interface ClaudeCodeParams {
 }
 
 /** Mutates and returns params. Do not call twice on the same object. */
-export function applyClaudeCodeTransforms<T extends ClaudeCodeParams>(params: T): T {
+export async function applyClaudeCodeTransforms<T extends ClaudeCodeParams>(params: T): Promise<T> {
 	const version = process.env.ANTHROPIC_CLI_VERSION ?? config.ccVersion;
 	const entrypoint = process.env.CLAUDE_CODE_ENTRYPOINT ?? "sdk-cli";
 
-	const billingHeader = buildBillingHeaderValue(
+	const billingHeader = await buildBillingHeaderValue(
 		(params.messages ?? []) as Parameters<typeof buildBillingHeaderValue>[0],
 		version,
 		entrypoint,
